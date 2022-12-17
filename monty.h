@@ -44,6 +44,7 @@ extern stack_t *montyStack;
 void err(int, int, char *);
 ssize_t readFile(const char *);
 int runLine(char *, int);
+int compare(int, char *, char *);
 void push(int);
 int top(int, int);
 int pop(int);

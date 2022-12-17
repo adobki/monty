@@ -1,4 +1,5 @@
 #include "monty.h"
+#define bufferSize 999
 
 stack_t *montyStack = NULL;
 
@@ -17,10 +18,7 @@ stack_t *montyStack = NULL;
 int main(int argc, char **argv)
 {
 	if (argc != 2)
-	{
-		fprintf(stderr, "USAGE: monty file\n");
-		exit(EXIT_FAILURE);
-	}
+		err(0, -1, "");
 
 	readFile(argv[1]);
 
@@ -41,35 +39,77 @@ int main(int argc, char **argv)
 
 ssize_t readFile(const char *filename)
 {
-	char *buffer;
+	char buffer[bufferSize];
 	FILE *FP;
-	ssize_t line = 0, size = 99;
+	ssize_t index, line = 0;
 
 	FP = fopen(filename, "r");
 	if (FP == NULL)
-	{
-		fprintf(stderr, "Error: Can't open file %s\n", filename);
-		exit(EXIT_FAILURE);
-	}
-
-	buffer = malloc(sizeof(char) * size);
-	if (!buffer)
-		err(1, line, "");
+		err(1, -1, (char *)filename);
 
 	while (1)
 	{
-		buffer = fgets(buffer, size, FP);
-		if (!buffer)
+		index = 0;
+		if (!fgets(&buffer[index], bufferSize, FP))
 			break;
-		while (*buffer == ' ')
-			buffer++;
-		runLine(buffer, ++line);
+		while (buffer[index] == ' ')
+			index++;
+		if (runLine(&buffer[index], ++line))
+		{
+			line = EXIT_FAILURE;
+			break;
+		}
 	}
 
 	fclose(FP);
-	free(buffer);
 
 	return (line);
+}
+
+/**
+ * compare - Runs a comparison operation based on selected mode.
+ *           * mode == 1:
+ *             Compares two strings. Checks if the word in str is the first
+ *             word in src. Returns index of command (in montyCom array) and
+ *             number of letters in the command if true, 0 otherwise.
+ *           * mode == 2:
+ *             Checks that every character in the first word of string is an
+ *             integer (isInt function), for passing it to atoi() function.
+ *             NOTE: Check skips first character if it's negative sign: '-'.
+ *
+ * @mode: Determines comparison method. See notes above.
+ * @str: Command from stored list of valid Monty ByteCode script commands.
+ * @src: Line from a Monty ByteCode script to be checked for a command.
+ *
+ * Return: Number of letters in src if true on success.
+ *         0 on error.
+ */
+int compare(int mode, char *str, char *src)
+{
+	int index = -1;
+
+	if (mode == 1)
+	{
+		while (str[++index])
+			if (str[index] != src[index])
+				return (0);
+
+		if (src[index] != ' ' && src[index] != '\n' && src[index] != '\0')
+			index = 0;
+	}
+	else if (mode == 2)
+	{
+		while (str[++index] && str[index] != ' ' && str[index] != '\n')
+			if (str[index] < '0' || str[index] > '9')
+				if (index != 0 || str[index] != '-')
+					return (0);
+		if (*src == '-' && index == 1)
+			return (0);
+	}
+	else
+		return (0);
+
+	return (index);
 }
 
 /**
@@ -85,60 +125,44 @@ ssize_t readFile(const char *filename)
  */
 int runLine(char *str, int line)
 {
-	int i, callFunc;
+	int len, callFunc = 7;
+	char comList[7][5] = {"push", "pall", "pint", "pop", "swap", "nop", "add"};
 
 	if (*str == 0 || *str == '\n')
 		return (EXIT_SUCCESS);
-
-	i = 1, callFunc = 0;
-
-	if (*str == 'p')
+	while (callFunc--)
 	{
-		if (str[i] == 'u' && str[i + 1] == 's' && str[i + 2] == 'h')
-			callFunc = 2, str += 4;
-		else if (str[i] == 'a' && str[i + 1] == 'l' && str[i + 2] == 'l')
-			callFunc = 1, str += 4;
-		else if (str[i] == 'i' && str[i + 1] == 'n' && str[i + 2] == 't')
-			callFunc = 3, str += 4;
-		else if (str[i] == 'o' && str[i + 1] == 'p')
-			callFunc = 4, str += 3;
+		len = compare(1, comList[callFunc], str);
+		if (len)
+			break;
 	}
-	else if (*str == 's')
+	if (!len)
+		err(3, line, str);
+	else
+		str += len;
+
+callFunc++;	/* ADD new function at 0 index and delete this line. Thank you! */
+	if (callFunc == 1)
 	{
-		if (str[i] == 'w' && str[i + 1] == 'a' && str[i + 2] == 'p')
-			callFunc = 5, str += 4;
+		while (*str == ' ')
+			str++;
+		if (compare(2, str, str))
+			push(atoi(str));
+		else
+			err(4, line, "");
 	}
-	else if (str[0] == 'n' && str[i] == 'o' && str[i + 1] == 'p')
+	else if (callFunc == 2)
+		top(1, line);
+	else if (callFunc == 3)
+		top(0, line);
+	else if (callFunc == 4)
+		pop(line);
+	else if (callFunc == 5)
+		swap(line);
+	else if (callFunc == 6)
 		return (EXIT_SUCCESS);
-	else if (str[0] == 'a' && str[i] == 'd' && str[i + 1] == 'd')
-		callFunc = 6, str += 3;
-	else
-		err(2, line, str);
-
-	if (*str == ' ' || *str == '\n' || *str == '\0')
-	{
-		if (callFunc == 1)
-			top(1, line);
-		else if (callFunc == 2)
-		{
-			while (*str == ' ')
-				str++;
-			if ((*str >= '0' && *str <= '9') || *str == '-')
-				push(atoi(str));
-			else
-				err(3, line, "");
-		}
-		else if (callFunc == 3)
-			top(0, line);
-		else if (callFunc == 4)
-			pop(line);
-		else if (callFunc == 5)
-			swap(line);
-		else if (callFunc == 6)
-			add(line);
-	}
-	else
-		err(2, line, str);
+	else if (callFunc == 7)
+		add(line);
 
 	return (EXIT_SUCCESS);
 }
@@ -153,56 +177,37 @@ int runLine(char *str, int line)
  * @code: Error code (see chart above).
  * @line: Line number from the Monty ByteCode script that threw the error.
  * @str: Some string to be printed in the error message.
- *
- * Return: EXIT_SUCCESS (0) on success.
- *         EXIT_FAILURE (1) on error.
  */
 void err(int code, int line, char *str)
 {
+	char errMsgs[9][50] = {
+	"USAGE: monty file",                                  /*  0 */
+	"Error: Can't open file %s",                          /*  1 */
+	"Error: malloc failed",                               /*  2 */
+	"L%d: unknown instruction ",                          /*  3 */
+	"L%d: usage: push integer",                           /*  4 */
+	"L%d: can't pint, stack empty",                       /*  5 */
+	"L%d: can't pop an empty stack",                      /*  6 */
+	"L%d: can't swap, stack too short",                   /*  7 */
+	"L%d: can't add, stack too short",                    /*  8 */
+	};
+
 	if (code == 1)
+		fprintf(stderr, &errMsgs[code][0], str);
+	else if (errMsgs[code][0] == 'L')
 	{
-		fprintf(stderr, "Error: malloc failed\n");
-		exit(EXIT_FAILURE);
+		fprintf(stderr, &errMsgs[code][0], line);
+		if (code == 3)
+			while (*str && *str != ' ' && *str != '\n' && *str != '\t')
+				fprintf(stderr, "%c", *str++);
 	}
+	else
+		fprintf(stderr, &errMsgs[code][0]);
 
-	else if (code == 2)
-	{
-		fprintf(stderr, "L%d: unknown instruction %s", line, str);
-		/* Fixes double new line when str ends with '\n': */
-		while (*str)
-			str++;
-		if (str[-1] != '\n')
-			fprintf(stderr, "\n");
-		exit(EXIT_FAILURE);
-	}
+	fprintf(stderr, "\n");
 
-	else if (code == 3)
-	{
-		fprintf(stderr, "L%d: usage: push integer\n", line);
-		exit(EXIT_FAILURE);
-	}
+	while (montyStack)
+		pop(-1);
 
-	else if (code == 4)
-	{
-		fprintf(stderr, "L%d: can't pint, stack empty\n", line);
-		exit(EXIT_FAILURE);
-	}
-
-	else if (code == 5)
-	{
-		fprintf(stderr, "L%d: can't pop an empty stack\n", line);
-		exit(EXIT_FAILURE);
-	}
-
-	else if (code == 6)
-	{
-		fprintf(stderr, "L%d: can't swap, stack too short\n", line);
-		exit(EXIT_FAILURE);
-	}
-
-	else if (code == 7)
-	{
-		fprintf(stderr, "L%d: can't add, stack too short\n", line);
-		exit(EXIT_FAILURE);
-	}
+	exit(EXIT_FAILURE);
 }

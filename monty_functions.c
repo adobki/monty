@@ -11,7 +11,7 @@ void push(int data)
 
 	newNode = malloc(sizeof(stack_t));
 	if (!newNode)
-		err(1, 0, "");
+		err(2, 0, "");
 	newNode->n = data;
 	newNode->prev = newNode->next = NULL;
 
@@ -44,7 +44,7 @@ int top(int mode, int line)
 	else
 	{
 		if (!head)
-			err(4, line, "");
+			err(5, line, "");
 
 		printf("%d\n", head->n);
 	}
@@ -66,7 +66,7 @@ int pop(int line)
 	int data = -1;
 
 	if (!montyStack)
-		err(5, line, "");
+		err(6, line, "");
 
 	data = montyStack->n;
 	if (montyStack->next)
@@ -92,7 +92,7 @@ void swap(int line)
 	int tmpData;
 
 	if (!montyStack || montyStack->next == NULL)
-		err(6, line, "");
+		err(7, line, "");
 
 	tmpData = montyStack->n;
 	montyStack->n = montyStack->next->n;
@@ -109,7 +109,7 @@ void add(int line)
 	stack_t *tmpNode = montyStack;
 
 	if (!montyStack || montyStack->next == NULL)
-		err(7, line, "");
+		err(8, line, "");
 
 	montyStack->next->n += montyStack->n;
 	montyStack = montyStack->next;
