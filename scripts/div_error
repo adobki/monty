@@ -1,0 +1,6 @@
+push 1
+div
+push 6
+push 3
+pall
+pint

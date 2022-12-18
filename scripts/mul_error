@@ -1,0 +1,6 @@
+push 1
+mul
+push 6
+push 3
+pall
+pint

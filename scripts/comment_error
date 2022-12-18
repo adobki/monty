@@ -1,0 +1,6 @@
+push 1
+push #6
+mod
+push 3
+pall
+pint

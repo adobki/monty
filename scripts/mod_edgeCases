@@ -1,0 +1,9 @@
+push 12
+    push       -12
+  div   
+ pall
+
+  push   0  
+   mod   
+
+pint   

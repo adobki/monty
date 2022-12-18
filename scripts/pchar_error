@@ -1,0 +1,9 @@
+push 0
+pchar
+push 1
+pchar
+push 6
+pchar
+push -1
+push 128
+pchar

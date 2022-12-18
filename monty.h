@@ -45,10 +45,22 @@ void err(int, int, char *);
 ssize_t readFile(const char *);
 int runLine(char *, int);
 int compare(int, char *, char *);
+void callFunc(int, int);
+
+#define funcMAX 18
+#define bufferSize 999
+
 void push(int);
 int top(int, int);
 int pop(int);
 void swap(int);
 void add(int);
+void sub(int);
+void _div(int);
+void mod(int);
+void pchar(int);
+int pstr(void);
+int rotl(void);
+int rotr(void);
 
 #endif /* MONTY_H */

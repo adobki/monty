@@ -1,5 +1,23 @@
 #include "monty.h"
-#define bufferSize 999
+
+#ifndef STACK_H
+#define STACK_H
+
+#include "stack/stack_add.c"
+#include "stack/stack_div.c"
+#include "stack/stack_mod.c"
+#include "stack/stack_mul.c"
+#include "stack/stack_pchar.c"
+#include "stack/stack_pop.c"
+#include "stack/stack_pstr.c"
+#include "stack/stack_push.c"
+#include "stack/stack_rotl.c"
+#include "stack/stack_rotr.c"
+#include "stack/stack_sub.c"
+#include "stack/stack_swap.c"
+#include "stack/stack_top.c"
+
+#endif /* STACK_H */
 
 stack_t *montyStack = NULL;
 
@@ -36,7 +54,6 @@ int main(int argc, char **argv)
  * Return: Number of lines read by function on success.
  *         0 on error, filename==NULL, or file is empty.
  */
-
 ssize_t readFile(const char *filename)
 {
 	char buffer[bufferSize];
@@ -67,6 +84,51 @@ ssize_t readFile(const char *filename)
 }
 
 /**
+ * runLine - Executes a line from a Monty ByteCode script. First, it processes
+ *           the line to check for a valid command. If a command is found and
+ *           its syntax is valid, command is executed by calling a function.
+ *
+ * @str: Line from a Monty ByteCode script to be run by function.
+ * @line: Line number of str from the Monty ByteCode script.
+ *
+ * Return: EXIT_SUCCESS (0) on success.
+ *         EXIT_FAILURE (1) on error.
+ */
+int runLine(char *str, int line)
+{
+	int len, func = funcMAX;
+	char comList[funcMAX][6] = {"push", "pall", "pint", "pop", "swap", "nop",
+	"add", "sub", "div", "mul", "mod", "pchar", "pstr", "rotl", "rotr",
+	"stack", "queue", "#"};
+
+	if (*str == 0 || *str == '\n' || *str == '#')
+		return (EXIT_SUCCESS);
+	while (func--)
+	{
+		len = compare(1, comList[func], str);
+		if (len)
+			break;
+	}
+	if (!len)
+		err(3, line, str);
+
+	if (func == 0)
+	{
+		str += len;
+		while (*str == ' ')
+			str++;
+		if (*str != '#' && compare(2, str, str))
+			push(atoi(str));
+		else
+			err(4, line, "");
+	}
+	else
+		callFunc(func, line);
+
+	return (EXIT_SUCCESS);
+}
+
+/**
  * compare - Runs a comparison operation based on selected mode.
  *           * mode == 1:
  *             Compares two strings. Checks if the word in str is the first
@@ -90,20 +152,28 @@ int compare(int mode, char *str, char *src)
 
 	if (mode == 1)
 	{
+		if (*src == '#')
+			return (1);
+
 		while (str[++index])
 			if (str[index] != src[index])
 				return (0);
 
 		if (src[index] != ' ' && src[index] != '\n' && src[index] != '\0')
-			index = 0;
+			if (src[index] != '#')
+				index = 0;
 	}
 	else if (mode == 2)
 	{
 		while (str[++index] && str[index] != ' ' && str[index] != '\n')
+		{
 			if (str[index] < '0' || str[index] > '9')
 				if (index != 0 || str[index] != '-')
 					return (0);
-		if (*src == '-' && index == 1)
+			if (str[index + 1] == '#')
+				return (++index);
+		}
+		if ((*src == '-' || *src == '#') && index == 1)
 			return (0);
 	}
 	else
@@ -113,101 +183,43 @@ int compare(int mode, char *str, char *src)
 }
 
 /**
- * runLine - Executes a line from a Monty ByteCode script. First, it processes
- *           the line to check for a valid command. If a command is found and
- *           its syntax is valid, command is executed by calling a function.
+ * callFunc - Calls a function to perform a Monty stack operation.
+ *            Truncated from runLine function for <= 40 lines rule.
  *
- * @str: Line from a Monty ByteCode script to be run by function.
- * @line: Line number of str from the Monty ByteCode script.
- *
- * Return: EXIT_SUCCESS (0) on success.
- *         EXIT_FAILURE (1) on error.
+ * @func: Index of function to be called.
+ * @line: Current line number in the Monty ByteCode script.
  */
-int runLine(char *str, int line)
+void callFunc(int func, int line)
 {
-	int len, callFunc = 7;
-	char comList[7][5] = {"push", "pall", "pint", "pop", "swap", "nop", "add"};
-
-	if (*str == 0 || *str == '\n')
-		return (EXIT_SUCCESS);
-	while (callFunc--)
-	{
-		len = compare(1, comList[callFunc], str);
-		if (len)
-			break;
-	}
-	if (!len)
-		err(3, line, str);
-	else
-		str += len;
-
-callFunc++;	/* ADD new function at 0 index and delete this line. Thank you! */
-	if (callFunc == 1)
-	{
-		while (*str == ' ')
-			str++;
-		if (compare(2, str, str))
-			push(atoi(str));
-		else
-			err(4, line, "");
-	}
-	else if (callFunc == 2)
+	if (func == 1)
 		top(1, line);
-	else if (callFunc == 3)
+	else if (func == 2)
 		top(0, line);
-	else if (callFunc == 4)
+	else if (func == 3)
 		pop(line);
-	else if (callFunc == 5)
+	else if (func == 4)
 		swap(line);
-	else if (callFunc == 6)
-		return (EXIT_SUCCESS);
-	else if (callFunc == 7)
+	else if (func == 5 || func == funcMAX - 1)
+		return;
+	else if (func == 6)
 		add(line);
-
-	return (EXIT_SUCCESS);
+	else if (func == 7)
+		sub(line);
+	else if (func == 8)
+		_div(line);
+	else if (func == 9)
+		mul(line);
+	else if (func == 10)
+		mod(line);
+	else if (func == 11)
+		pchar(line);
+	else if (func == 12)
+		pstr();
+	else if (func == 13)
+		rotl();
+	else if (func == 14)
+		rotr();
+	else if (func >= 15)
+		return;
 }
 
-/**
- * err - Error handler for monty program, for code portability.
- *       ERROR CODES:
- *            Code 1:
- *            Code 2: Invalid instruction/command in current line.
- *            Code 3: No/invalid argument given for push command.
- *
- * @code: Error code (see chart above).
- * @line: Line number from the Monty ByteCode script that threw the error.
- * @str: Some string to be printed in the error message.
- */
-void err(int code, int line, char *str)
-{
-	char errMsgs[9][50] = {
-	"USAGE: monty file",                                  /*  0 */
-	"Error: Can't open file %s",                          /*  1 */
-	"Error: malloc failed",                               /*  2 */
-	"L%d: unknown instruction ",                          /*  3 */
-	"L%d: usage: push integer",                           /*  4 */
-	"L%d: can't pint, stack empty",                       /*  5 */
-	"L%d: can't pop an empty stack",                      /*  6 */
-	"L%d: can't swap, stack too short",                   /*  7 */
-	"L%d: can't add, stack too short",                    /*  8 */
-	};
-
-	if (code == 1)
-		fprintf(stderr, &errMsgs[code][0], str);
-	else if (errMsgs[code][0] == 'L')
-	{
-		fprintf(stderr, &errMsgs[code][0], line);
-		if (code == 3)
-			while (*str && *str != ' ' && *str != '\n' && *str != '\t')
-				fprintf(stderr, "%c", *str++);
-	}
-	else
-		fprintf(stderr, &errMsgs[code][0]);
-
-	fprintf(stderr, "\n");
-
-	while (montyStack)
-		pop(-1);
-
-	exit(EXIT_FAILURE);
-}
